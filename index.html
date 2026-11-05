@@ -1,1 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Dark Redemption</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#080b09;color:white;font-family:Arial;overflow:hidden}
+canvas{display:block;width:100vw;height:100vh;background:#172019}
+#hud{position:absolute;top:15px;left:15px;background:#111c;padding:12px;border-radius:10px}
+#controls{position:absolute;bottom:20px;width:100%;display:flex;justify-content:space-between;padding:15px;pointer-events:none}
+#controls button{pointer-events:auto;background:#222d;color:white;border:1px solid #888;padding:16px;border-radius:50%;font-size:17px}
+#weapons{position:absolute;top:15px;right:15px;display:flex;gap:5px}
+button{cursor:pointer}
+#start{position:absolute;inset:0;background:#050706;display:grid;place-content:center;text-align:center}
+#start button{padding:16px;background:#9c2525;color:white;border:0;border-radius:8px;font-size:20px}
+</style>
+</head>
+<body>
 
+<canvas id="game"></canvas>
+
+<div id="hud">
+DARK REDEMPTION<br>
+Health: <span id="health">100</span><br>
+Zombies: <span id="count">0</span><br>
+Weapon: <span id="weapon">Pistol</span>
+</div>
+
+<div id="weapons">
+<button onclick="choose('Pistol')">🔫</button>
+<button onclick="choose('Shotgun')">💥</button>
+<button onclick="choose('Rifle')">🎯</button>
+<button onclick="choose('Axe')">🪓</button>
+<button onclick="choose('RPG')">🚀</button>
+</div>
+
+<div id="controls">
+<button id="move">MOVE</button>
+<button onclick="attack()">ATTACK</button>
+<button onclick="jump()">JUMP</button>
+</div>
+
+<div id="start">
+<h1>DARK REDEMPTION</h1>
+<p>THE WORLD HAS FALLEN</p>
+<button onclick="startGame()">START SURVIVAL</button>
+</div>
+
+<script>
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+
+let player={x:400,y:300,hp:100};
+let zombies=[];
+let weapon="Pistol";
+let running=false;
+let keys={};
+let kills=0;
+let lastAttack=0;
+
+function resize(){
+ canvas.width=innerWidth;
+ canvas.height=innerHeight;
+}
+resize();
+addEventListener("resize",resize);
+
+function choose(w){
+ weapon=w;
+ document.getElementById("weapon").textContent=w;
+}
+
+function spawn(){
+ zombies.push({
+ x:Math.random()*canvas.width,
+ y:Math.random()*canvas.height,
+ hp:weapon==="RPG"?3:2
+ });
+}
+
+function startGame(){
+ document.getElementById("start").style.display="none";
+ running=true;
+ for(let i=0;i<6;i++)spawn();
+ loop();
+}
+
+function attack(){
+ if(!running)return;
+ if(Date.now()-lastAttack<350)return;
+ lastAttack=Date.now();
+
+ let range=weapon==="Axe"?75:weapon==="Shotgun"?160:weapon==="RPG"?220:130;
+ let damage=weapon==="RPG"?3:weapon==="Shotgun"?2:1;
+
+ let target=zombies.find(z=>Math.hypot(z.x-player.x,z.y-player.y)<range);
+ if(target){
+ target.hp
