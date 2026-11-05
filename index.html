@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>DARK REDEMPTION</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080b0d;color:#fff;font-family:Arial,sans-serif;touch-action:none}
+#root{position:fixed;inset:0;background:#101619}
+canvas{width:100%;height:100%;display:block}
+.screen{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:22px;background:linear-gradient(180deg,#05080ab8,#05080af2),radial-gradient(ellipse at center,#344047,#080b0d 70%);z-index:4}
+.hidden{display:none!important}
+h1{font-size:clamp(40px,9vw,76px);line-height:.86;letter-spacing:.1em;margin:0;text-shadow:0 4px 25px #000,0 0 20px #9f2929}
+h1 span{color:#c43d3d}
+.tag{letter-spacing:.35em;color:#b7c1c5;font-size:10px;margin:18px 0 30px}
+.btn{border:1px solid #e16b6b;background:#a32929;color:white;padding:15px 30px;min-width:210px;font-weight:900;letter-spacing:.18em;font-size:14px;border-radius:3px;margin:6px;cursor:pointer}
+.btn:active{transform:scale(.97);background:#c43d3d}
+.small{color:#b5c0c4;font-size:12px;line-height:1.6;max-width:420px}
+.meter{height:5px;width:min(310px,80vw);background:#343b3e;margin:28px 0 12px}
+.meter i{display:block;height:100%;width:0;background:#c43d3d;transition:width .25s}
+#hud{position:absolute;inset:0;pointer-events:none;display:none}
+#top{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;gap:8px}
+.box{background:#05090bc9;border:1px solid #ffffff35;padding:9px 11px;font-size:11px;letter-spacing:.1em;border-radius:3px}
+.bar{width:120px;height:6px;background:#492020;margin-top:6px}
+.bar i{display:block;height:100%;width:100%;background:#c83b3b}
+#objective{position:absolute;top:74px;left:50%;transform:translateX(-50%);background:#05090bc9;padding:9px 13px;font-size:11px;letter-spacing:.1em;white-space:nowrap;text-align:center}
+#cross{position:absolute;left:50%;top:50%;width:13px;height:13px;border:1px solid #ffffffa0;border-radius:50%;transform:translate(-50%,-50%)}
+#damageflash,#boomflash,#vignette{position:absolute;inset:0;pointer-events:none}
+#damageflash{background:radial-gradient(ellipse,transparent 35%,#a50000a8 100%);opacity:0;transition:opacity .2s}
+#boomflash{background:#ffb36a;opacity:0;mix-blend-mode:screen}
+#vignette{background:radial-gradient(ellipse,transparent 45%,#000b 100%)}
+#pad{position:absolute;bottom:18px;left:14px;display:grid;grid-template-columns:48px 48px 48px;grid-template-rows:48px 48px;gap:5px;pointer-events:auto}
+.touch{background:#10191dcc;border:1px solid #ffffff55;color:white;border-radius:8px;font-size:18px;touch-action:none}
+.up{grid-column:2}.left{grid-column:1;grid-row:2}.down{grid-column:2;grid-row:2}.right{grid-column:3;grid-row:2}
+#actions{position:absolute;right:15px;bottom:22px;display:grid;grid-template-columns:68px 68px;gap:8px;pointer-events:auto}
+.action{height:58px;border-radius:50%;background:#982b2bdd;border:1px solid #ef7777;color:#fff;font-weight:bold;font-size:11px;touch-action:none}
+#hint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;color:#c2c9cb;background:#0008;padding:5px 8px;white-space:nowrap}
+@media(min-width:750px){
+#pad{left:28px;bottom:28px}
+.touch{width:56px;height:56px}
+#actions{right:30px;bottom:30px}
+.action{width:74px;height:64px}
+}
+</style>
+</head>
+<body>
+<div id="root">
+
+<div id="loading" class="screen">
+<h1>DARK<br><span>REDEMPTION</span></h1>
+<div class="tag">THE CITY HAS FALLEN</div>
+<div class="meter"><i id="loadbar"></i></div>
+<div id="loadtxt" class="small">INITIALIZING SURVIVAL SYSTEMS 0%</div>
+<button id="start" class="btn hidden">START SURVIVAL</button>
+<div class="small">FIRST-PERSON NIGHTMARE · SURVIVE THE OUTBREAK</div>
+</div>
+
+<div id="hud">
+<div id="top">
+<div class="box">HEALTH<div class="bar"><i id="hp"></i></div></div>
+<div class="box">NIGHT 01<br><span id="kills">THREATS: 0</span></div>
+<div class="box">SUPPLIES<br><span id="supplies">0 / 3</span></div>
+</div>
+<div id="objective">OBJECTIVE: FIND 3 SUPPLY CRATES</div>
+<div id="cross"></div>
+<div id="damageflash"></div>
+<div id="boomflash"></div>
+<div id="vignette"></div>
+
+<div id="pad">
+<button class="touch up" data-dir="up">▲</button>
+<button class="touch left" data-dir="left">◀</button>
+<button class="touch down" data-dir="down">▼</button>
+<button class="touch right" data-dir="right">▶</button>
+</div>
+
+<div id="actions">
+<button id="hit" class="action">PUSH BACK</button>
+<button id="run" class="action">SPRINT</button>
+</div>
+<div id="hint">MOVE WITH PAD · DRAG RIGHT SIDE TO LOOK · SPACE TO PUSH BACK · GAMEPAD</div>
+</div>
+
+<div id="end" class="screen hidden">
+<h1 id="endtitle">MISSION<br><span>COMPLETE</span></h1>
+<p id="endmsg" class="small">You made it through the night.</p>
+<button id="restart" class="btn">PLAY AGAIN</button>
+</div>
+
+</div>
+
+<script type="module">
+const $=id=>document.getElementById(id);
+let THREE,scene,camera,renderer,clock,player,started=false;
+let health=100,supplies=0,kills=0,crates=[],zombies=[],keys={};
+let touch={x:0,z:0},sprinting=false,lastHit=0,ended=false;
+let yaw=0,pitch=0,lookTouch=null,explosions=[],hands;
+const root=$('root');
+
+function progress(n,s){
+$('loadbar').style.width=n+'%';
+$('loadtxt').textContent=s+' '+n+'%';
+}
+
+function material(c,rough=1,metal=0){
+return new THREE.MeshStandardMaterial({color:c,roughness:rough,metalness:metal});
+}
+
+function cube(w,h,d,m,x,y,z){
+let o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
+o.position.set(x,y,z);
+o.castShadow=true;
+o.receiveShadow=true;
+scene.add(o);
+return o;
+}
+
+async function init(){
+try{
+progress(10,'LOADING 3D ENGINE');
+THREE=await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js');
+progress(35,'GENERATING CITY');
+build();
+progress(75,'PLACING OBJECTIVES');
+for(let i=0;i<8;i++)spawnZombie();
+for(let i=0;i<3;i++)spawnCrate(8+i*8,(i%2?1:-1)*3);
+progress(100,'READY');
+$('start').classList.remove('hidden');
+}catch(e){
+$('loadtxt').textContent='3D ENGINE FAILED TO LOAD';
+console.error(e);
+}
+}
+
+function build(){
+scene=new THREE.Scene();
+scene.background=new THREE.Color(0x090e12);
+scene.fog=new THREE.FogExp2(0x090e12,.024);
+
+camera=new THREE.PerspectiveCamera(82,innerWidth/innerHeight,.08,220);
+
+renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+root.prepend(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0x9eafbd,0x191513,1.05));
+
+let moon=new THREE.DirectionalLight(0xb7c8da,2.1);
+moon.position.set(-10,24,8);
+moon.castShadow=true;
+moon.shadow.mapSize.set(1024,1024);
+scene.add(moon);
+
+let ground=new THREE.Mesh(new THREE.PlaneGeometry(150,150),material(0x282c2d));
+ground.rotation.x=-Math.PI/2;
+ground.position.y=-.08;
+ground.receiveShadow=true;
+scene.add(ground);
+
+let road=new THREE.Mesh(new THREE.PlaneGeometry(9,140),material(0x171b1d));
+road.rotation.x=-Math.PI/2;
+road.position.y=-.04;
+scene.add(road);
+
+for(let z=-60;z<65;z+=10){
+cube(.1,.02,3,material(0x8a8270),0,.01,z);
+}
+
+let concrete=material(0x44494a);
+let dark=material(0x252c30);
+let glass=new THREE.MeshStandardMaterial({
+color:0x26363c,
+emissive:0x18252a,
+emissiveIntensity:.35
+});
+
+for(let side of [-1,1]){
+for(let i=0;i<13;i++){
+let x=side*(8+Math.random()*7);
+let z=-58+i*10;
+let w=5+Math.random()*4;
+let h=8+Math.random()*14;
+let d=6+Math.random()*5;
+
+cube(w,h,d,Math.random()>.5?concrete:dark,x,h/2,z);
+
+for(let y=2;y<h-1;y+=3){
+for(let xx=-w/2+1;xx<w/2-.5;xx+=2){
+cube(.9,1.15,.04,glass,x+xx,y,z-d/2-.03);
+}
+}
+}
+}
+
+let debris=material(0x56514a);
+for(let i=0;i<55;i++){
+let x=(Math.random()-.5)*28;
+let z=(Math.random()-.5)*110;
+if(Math.abs(x)<5)continue;
+let r=cube(.4+Math.random()*1.2,.2+Math.random()*.5,.5+Math.random(),debris,x,.12,z);
+r.rotation.y=Math.random()*3;
+}
+
+let car=material(0x252c31,.45,.3);
+for(let z of [-18,28]){
+cube(2,.8,4,car,3,.6,z);
+cube(1.7,.6,1.7,glass,3,1.2,z);
+}
+
+for(let z=-45;z<50;z+=18){
+for(let side of [-1,1]){
+cube(.14,5,.14,material(0x3e4548,.5,.6),side*5,2.5,z);
+cube(1.3,.12,.12,material(0x3e4548),side*5.5,4.8,z);
+let l=new THREE.PointLight(0xffbd7a,1.3,10);
+l.position.set(side*5.5,4.5,z);
+scene.add(l);
+}
+}
+
+player=new THREE.Group();
+let torso=new THREE.Mesh(
+new THREE.CapsuleGeometry(.38,.85,4,8),
+material(0x303a40)
+);
+torso.position.y=1;
+torso.castShadow=true;
+player.add(torso);
+
+let head=new THREE.Mesh(
+new THREE.SphereGeometry(.25,12,10),
+material(0x9b9589)
+);
+head.position.y=1.72;
+player.add(head);
+
+scene.add(player);
+player.position.set(0,0,4);
+player.visible=false;
+
+hands=new THREE.Group();
+camera.add(hands);
+
+let glove=material(0x20272b,.9);
+let sleeve=material(0x30383b,.95);
+
+let arm=new THREE.Mesh(
+new THREE.CapsuleGeometry(.11,.48,4,8),
+sleeve
+);
+arm.position.set(.34,-.34,-.58);
+arm.rotation.z=-.35;
+hands.add(arm);
+
+let fist=new THREE.Mesh(
+new THREE.SphereGeometry(.13,12,10),
+glove
+);
+fist.position.set(.36,-.16,-.72);
+hands.add(fist);
+
+let flashlight=new THREE.Mesh(
+new THREE.CylinderGeometry(.055,.07,.34,12),
+material(0x252a2d,.35,.7)
+);
+flashlight.rotation.x=Math.PI/2;
+flashlight.position.set(.35,-.1,-.9);
+hands.add(flashlight);
+
+let beam=new THREE.SpotLight(0xe3e8dd,95,32,.32,.55,1.3);
+beam.position.set(.35,-.1,-.85);
+beam.target.position.set(.2,-.25,-9);
+camera.add(beam);
+camera.add(beam.target);
+
+clock=new THREE.Clock();
+window.addEventListener('resize',resize);
+renderer.setAnimationLoop(loop);
+}
+
+function spawnZombie(){
+let g=new THREE.Group();
+let skin=material(0x77796c);
+let shirt=material(0x292d2b);
+let pants=material(0x202629);
+let dark=material(0x111514);
+
+let eye=new THREE.MeshStandardMaterial({
+color:0xb52b1d,
+emissive:0x6d0904,
+emissiveIntensity:1.4
+});
+
+let torso=new THREE.Mesh(
+new THREE.BoxGeometry(.58,.78,.32),
+shirt
+);
+torso.position.y=1.12;
+g.add(torso);
+
+let neck=new THREE.Mesh(
+new THREE.CylinderGeometry(.09,.12,.18,8),
+skin
+);
+neck.position.y=1.58;
+g.add(neck);
+
+let head=new THREE.Mesh(
+new THREE.SphereGeometry(.24,14,12),
+skin
+);
+head.scale.set(.9,1.1,.85);
+head.position.y=1.78;
+g.add(head);
+
+let jaw=new THREE.Mesh(
+new THREE.BoxGeometry(.22,.12,.18),
+dark
+);
+jaw.position.set(0,1.65,.12);
+g.add(jaw);
+
+for(let side of [-1,1]){
+let e=new THREE.Mesh(
+new THREE.SphereGeometry(.035,8,8),
+eye
+);
+e.position.set(side*.09,1.82,.205);
+g.add(e);
+
+let arm=new THREE.Mesh(
+new THREE.CapsuleGeometry(.095,.53,4,7),
+skin
+);
+arm.position.set(side*.39,1.12,.08);
+arm.rotation.z=side*.22;
+g.add(arm);
+
+let leg=new THREE.Mesh(
+new THREE.CapsuleGeometry(.12,.52,4,7),
+pants
+);
+leg.position.set(side*.16,.39,0);
+g.add(leg);
+}
+
+g.position.set(
+(Math.random()-.5)*10,
+0,
+-15-Math.random()*48
+);
+g.userData.phase=Math.random()*6;
+scene.add(g);
+zombies.push(g);
+}
+
+function spawnCrate(z,x){
+let g=new THREE.Group();
+let wood=material(0x70502d);
+let metal=material(0x8d8b78,.5,.6);
+
+let b=new THREE.Mesh(
+new THREE.BoxGeometry(1.1,.8,.9),
+wood
+);
+b.position.y=.45;
+g.add(b);
+
+for(let y of [.12,.75]){
+let band=new THREE.Mesh(
+new THREE.BoxGeometry(1.14,.08,.94),
+metal
+);
+band.position.y=y;
+g.add(band);
+}
+
+g.position.set(x,0,z);
+scene.add(g);
+crates.push(g);
+}
+
+function resize(){
+if(!camera)return;
+camera.aspect=innerWidth/innerHeight;
+camera.updateProjectionMatrix();
+renderer.setSize(innerWidth,innerHeight);
+}
+
+function setHealth(){
+$('hp').style.width=health+'%';
+if(health<=0)finish(false);
+}
+
+function finish(win){
+if(ended)return;
+ended=true;
+started=false;
+$('hud').style.display='none';
+$('end').classList.remove('hidden');
+
+$('endtitle').innerHTML=win
+?'MISSION<br><span>COMPLETE</span>'
+:'YOU WERE<br><span>OVERRUN</span>';
+
+$('endmsg').textContent=win
+?'You found all supplies and survived the night.'
+:'Your supplies collected: '+supplies+' / 3. Try a different route.';
+}
+
+function hit(){
+if(!started||clock.elapsedTime-lastHit<.6)return;
+lastHit=clock.elapsedTime;
+
+let near=null,dist=2.5;
+
+for(let z of zombies){
+let d=z.position.distanceTo(player.position);
+if(d<dist){
+dist=d;
+near=z;
+}
+}
+
+if(near){
+scene.remove(near);
+zombies=zombies.filter(z=>z!==near);
+kills++;
+$('kills').textContent='THREATS: '+kills;
+if(zombies.length<5)spawnZombie();
+$('objective').textContent='THREAT PUSHED BACK';
+}else{
+$('objective').textContent='NO ZOMBIE IN REACH';
+}
+}
+
+function loop(){
+if(!scene)return;
+
+let dt=Math.min(clock.getDelta(),.05);
+let t=clock.elapsedTime;
+
+if(started){
+let x=0,z=0;
+
+if(keys.w||keys.ArrowUp)z--;
+if(keys.s||keys.ArrowDown)z++;
+if(keys.a||keys.ArrowLeft)x--;
+if(keys.d||keys.ArrowRight)x++;
+
+x+=touch.x;
+z+=touch.z;
+
+let gp=navigator.getGamepads?.()[0];
+
+if(gp){
+x+=gp.axes?.[0]||0;
+z+=gp.axes?.[1]||0;
+if(gp.buttons?.[0]?.pressed)hit();
+sprinting=!!gp.buttons?.[1]?.pressed;
+}
+
+let l=Math.hypot(x,z)||1;
+x/=l;
+z/=l;
+
+let speed=sprinting?8:4.8;
+
+if(x||z){
+let forwardX=-Math.sin(yaw);
+let forwardZ=-Math.cos(yaw);
+let rightX=Math.cos(yaw);
+let rightZ=-Math.sin(yaw);
+
+let mx=x*rightX+z*forwardX;
+let mz=x*rightZ+z*forwardZ;
+
+player.position.x=THREE.MathUtils.clamp(
+player.position.x+mx*dt*speed,-6,6
+);
+
+player.position.z=THREE.MathUtils.clamp(
+player.position.z+mz*dt*speed,-65,65
+);
+}
+
+camera.position.set(
+player.position.x,
+1.62,
+player.position.z
+);
+
+camera.rotation.order="YXZ";
+camera.rotation.y=yaw;
+camera.rotation.x=pitch;
+
+for(let zom of [...zombies]){
+let dx=player.position.x-zom.position.x;
+let dz=player.position.z-zom.position.z;
+let d=Math.hypot(dx,dz);
+
+if(d>1.15){
+zom.position.x+=dx/d*dt*.62;
+zom.position.z+=dz/d*dt*.62;
+zom.rotation.y=Math.atan2(dx,dz);
+}else if(Math.random()<dt*.45){
+health=Math.max(0,health-5);
+setHealth();
+
+$('damageflash').style.opacity='.8';
+setTimeout(()=>$('damageflash').style.opacity='0',220);
+$('objective').textContent='UNDER ATTACK!';
+}
+}
+
+for(let c of [...crates]){
+if(c.position.distanceTo(player.position)<1.6){
+scene.remove(c);
+crates=crates.filter(v=>v!==c);
+supplies++;
+
+$('supplies').textContent=supplies+' / 3';
+$('objective').textContent='SUPPLY FOUND '+supplies+' / 3';
+
+if(supplies===3)finish(true);
+}
+}
+
+if(t>lastHit+1.4&&supplies<3&&health>0){
+$('objective').textContent='OBJECTIVE: FIND '+(3-supplies)+' MORE SUPPLY CRATE'+(supplies===2?'':'S');
+}
+}
+
+// Distant cinematic blasts are visual ambience only
+if(started&&Math.random()<dt*.055){
+let ex=new THREE.Group();
+
+let p=new THREE.Mesh(
+new THREE.SphereGeometry(.8,12,10),
+new THREE.MeshBasicMaterial({
+color:0xff7a32,
+transparent:true,
+opacity:.8
+})
+);
+
+p.scale.set(1,1,1);
+ex.add(p);
+
+ex.position.set(
+(Math.random()-.5)*18,
+2+Math.random()*4,
+player.position.z-18-Math.random()*25
+);
+
+scene.add(ex);
+explosions.push({obj:ex,life:0});
+
+$('boomflash').style.opacity='.18';
+setTimeout(()=>$('boomflash').style.opacity='0',100);
+}
+
+for(let e of [...explosions]){
+e.life+=dt;
+e.obj.scale.setScalar(1+e.life*4);
+e.obj.children[0].material.opacity=Math.max(0,.8-e.life*1.7);
+
+if(e.life>0.5){
+scene.remove(e.obj);
+explosions=explosions.filter(v=>v!==e);
+}
+}
+
+renderer.render(scene,camera);
+}
+
+function start(){
+if(started)return;
+started=true;
+$('loading').classList.add('hidden');
+$('hud').style.display='block';
+}
+
+$('start').addEventListener('click',start);
+$('restart').addEventListener('click',()=>location.reload());
+
+// Mouse look on desktop and swipe look on touch screens
+renderer.domElement.addEventListener('click',()=>{
+if(started&&renderer.domElement.requestPointerLock)
+renderer.domElement.requestPointerLock();
+});
+
+document.addEventListener('mousemove',e=>{
+if(document.pointerLockElement===renderer.domElement){
+yaw-=e.movementX*.0022;
+pitch=THREE.MathUtils.clamp(
+pitch-e.movementY*.0022,-1.15,1.15
+);
+}
+});
+
+root.addEventListener('pointerdown',e=>{
+if(!started||e.pointerType==='mouse'||e.clientX<innerWidth*.42)return;
+lookTouch={x:e.clientX,y:e.clientY,id:e.pointerId};
+});
+
+root.addEventListener('pointermove',e=>{
+if(!lookTouch||e.pointerId!==lookTouch.id)return;
+
+let dx=e.clientX-lookTouch.x;
+let dy=e.clientY-lookTouch.y;
+
+yaw-=dx*.006;
+pitch=THREE.MathUtils.clamp(pitch-dy*.005,-1.15,1.15);
+
+lookTouch={x:e.clientX,y:e.clientY,id:e.pointerId};
+});
+
+['pointerup','pointercancel'].forEach(k=>
+root.addEventListener(k,e=>{
+if(lookTouch&&e.pointerId===lookTouch.id)lookTouch=null;
+})
+);
+
+window.addEventListener('keydown',e=>{
+keys[e.key]=true;
+if(e.key===' '){
+e.preventDefault();
+hit();
+}
+if(e.key==='Shift')sprinting=true;
+});
+
+window.addEventListener('keyup',e=>{
+keys[e.key]=false;
+if(e.key==='Shift')sprinting=false;
+});
+
+document.querySelectorAll('[data-dir]').forEach(b=>{
+let d=b.dataset.dir;
+let v={
+up:[0,-1],
+down:[0,1],
+left:[-1,0],
+right:[1,0]
+}[d];
+
+let on=e=>{
+e.preventDefault();
+touch={x:v[0],z:v[1]};
+};
+
+let off=e=>{
+e.preventDefault();
+touch={x:0,z:0};
+};
+
+b.addEventListener('pointerdown',on);
+
+['pointerup','pointercancel','pointerleave'].forEach(k=>
+b.addEventListener(k,off)
+);
+});
+
+$('hit').addEventListener('pointerdown',e=>{
+e.preventDefault();
+hit();
+});
+
+$('run').addEventListener('pointerdown',e=>{
+e.preventDefault();
+sprinting=true;
+});
+
+['pointerup','pointercancel','pointerleave'].forEach(k=>
+$('run').addEventListener(k,()=>sprinting=false)
+);
+
+init();
+</script>
+</body>
+</html>
